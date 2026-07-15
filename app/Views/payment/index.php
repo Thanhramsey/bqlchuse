@@ -91,13 +91,35 @@
             font-size: 0.8rem;
             margin-right: 0.5rem;
         }
-        
         /* Modal tweaks for mobile */
         .modal-dialog {
             margin: 0.5rem;
         }
         .modal-body {
             padding: 1rem;
+        }
+        .modal-footer {
+            flex-wrap: nowrap !important;
+            justify-content: space-between !important;
+            padding: 0.75rem !important;
+            gap: 0.25rem !important;
+        }
+        .modal-footer .btn {
+            font-size: 0.75rem !important;
+            padding: 0.4rem 0.5rem !important;
+            margin: 0 !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            text-align: center !important;
+        }
+        .modal-footer .btn-link {
+            flex: 0 0 auto !important;
+            padding-left: 0.25rem !important;
+            padding-right: 0.25rem !important;
+        }
+        .modal-footer .btn i {
+            margin-right: 0.2rem !important;
+            font-size: 0.9rem !important;
         }
     }
 </style>
@@ -231,30 +253,30 @@
                         Đang áp dụng cho <strong>1</strong> hộ dân được chọn.
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label required">Chọn năm thu phí</label>
+                    <div class="row g-2">
+                        <div class="col-4 mb-3">
+                            <label class="form-label required text-truncate" title="Năm thu phí">Năm</label>
                             <select name="year" id="range_year" class="form-select">
-                                <option value="2026" selected>Năm 2026</option>
-                                <option value="2027">Năm 2027</option>
-                                <option value="2028">Năm 2028</option>
-<option value="2029">Năm 2029</option>
-                                <option value="2030">Năm 2030</option>
+                                <option value="2026" selected>2026</option>
+                                <option value="2027">2027</option>
+                                <option value="2028">2028</option>
+                                <option value="2029">2029</option>
+                                <option value="2030">2030</option>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label required">Từ tháng</label>
+                        <div class="col-4 mb-3">
+                            <label class="form-label required text-truncate" title="Từ tháng">Từ tháng</label>
                             <select name="from_month" id="range_from" class="form-select">
                                 <?php for ($m = 1; $m <= 12; $m++) : ?>
-                                    <option value="<?= $m ?>" <?= $m == 1 ? 'selected' : '' ?>>Tháng <?= $m ?></option>
+                                    <option value="<?= $m ?>" <?= $m == 1 ? 'selected' : '' ?>>T. <?= $m ?></option>
                                 <?php endfor; ?>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label required">Đến tháng</label>
+                        <div class="col-4 mb-3">
+                            <label class="form-label required text-truncate" title="Đến tháng">Đến tháng</label>
                             <select name="to_month" id="range_to" class="form-select">
                                 <?php for ($m = 1; $m <= 12; $m++) : ?>
-                                    <option value="<?= $m ?>" <?= $m == date('n') ? 'selected' : '' ?>>Tháng <?= $m ?></option>
+                                    <option value="<?= $m ?>" <?= $m == date('n') ? 'selected' : '' ?>>T. <?= $m ?></option>
                                 <?php endfor; ?>
                             </select>
                         </div>
