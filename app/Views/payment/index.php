@@ -2,6 +2,107 @@
 
 <?= $this->section('title') ?>Thu phí & Phát hành hóa đơn<?= $this->endSection() ?>
 
+<?= $this->section('styles') ?>
+<style>
+    /* Mobile-first card view styling for households billing table */
+    @media (max-width: 767.98px) {
+        #householdsBillingTable thead {
+            display: none;
+        }
+        #householdsBillingTable, 
+        #householdsBillingTable tbody, 
+        #householdsBillingTable tr, 
+        #householdsBillingTable td {
+            display: block;
+            width: 100%;
+        }
+        #householdsBillingTable tr {
+            margin-bottom: 1.25rem;
+            background-color: #fff;
+            border: 1px solid #e6e8eb;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        /* Hide checkbox column on mobile */
+        #householdsBillingTable tr td:first-child {
+            display: none;
+        }
+        #householdsBillingTable td {
+            text-align: left !important;
+            padding: 0.5rem 0;
+            border: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #f1f3f5;
+            white-space: normal;
+        }
+        #householdsBillingTable td:last-child {
+            border-bottom: none;
+            padding-top: 0.75rem;
+            justify-content: flex-end;
+        }
+        #householdsBillingTable td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #616876;
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+        }
+        
+        /* Mobile styling for the history table in the modal */
+        #individual-history-panel table thead {
+            display: none;
+        }
+        #individual-history-panel table,
+        #individual-history-panel table tbody,
+        #individual-history-panel table tr,
+        #individual-history-panel table td {
+            display: block;
+            width: 100%;
+        }
+        #individual-history-panel table tr {
+            margin-bottom: 1rem;
+            background-color: #f8f9fa;
+            border: 1px solid #e6e8eb;
+            border-radius: 6px;
+            padding: 0.75rem;
+        }
+        #individual-history-panel table td {
+            text-align: left !important;
+            padding: 0.4rem 0;
+            border: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #e9ecef;
+            white-space: normal;
+        }
+        #individual-history-panel table td:last-child {
+            border-bottom: none;
+            padding-top: 0.5rem;
+            justify-content: flex-end;
+        }
+        #individual-history-panel table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #616876;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
+        
+        /* Modal tweaks for mobile */
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+        .modal-body {
+            padding: 1rem;
+        }
+    }
+</style>
+<?= $this->endSection() ?>
+
 <?= $this->section('breadcrumb') ?>
 <ol class="breadcrumb breadcrumb-arrows" aria-label="breadcrumbs">
     <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Trang chủ</a></li>
@@ -482,14 +583,14 @@
                 html += `
                     <tr>
                         <td><input type="checkbox" class="form-check-input check-item" value="${item.id}"></td>
-                        <td><span class="text-secondary">${esc(item.household_code)}</span></td>
-                        <td><strong>${esc(item.owner_name)}</strong></td>
-                        <td>${esc(item.address)}</td>
-                        <td><span class="badge bg-blue-lt">${esc(item.household_type)}</span></td>
-                        <td><strong>${latestMonth}</strong></td>
-                        <td>${receiptContent}</td>
-                        <td>${paymentDate}</td>
-                        <td>${statusBadge}</td>
+                        <td data-label="Mã hộ:"><span class="text-secondary">${esc(item.household_code)}</span></td>
+                        <td data-label="Chủ hộ:"><strong>${esc(item.owner_name)}</strong></td>
+                        <td data-label="Địa chỉ:">${esc(item.address)}</td>
+                        <td data-label="Loại hộ:"><span class="badge bg-blue-lt">${esc(item.household_type)}</span></td>
+                        <td data-label="Kỳ gần nhất:"><strong>${latestMonth}</strong></td>
+                        <td data-label="Phiếu thu / HĐ:">${receiptContent}</td>
+                        <td data-label="Ngày thu/xuất:">${paymentDate}</td>
+                        <td data-label="Trạng thái:">${statusBadge}</td>
                         <td class="text-end">
                             <div class="btn-list justify-content-end flex-nowrap">
                                 <button class="btn btn-primary btn-sm" onclick="openIndividualModal(${item.id})">
@@ -549,13 +650,13 @@
                             : '';
                         html += `
                             <tr>
-                                <td><strong>${esc(h.billing_month)}</strong></td>
-                                <td class="text-blue font-weight-medium">${format_money(h.amount)}</td>
-                                <td><span class="badge ${statusClass} small">${esc(h.payment_status)}</span></td>
-                                <td>${format_date(h.payment_date)}</td>
-                                <td><code>${esc(h.receipt_code)}</code></td>
-                                <td>${vnptBadge}</td>
-                                <td>${esc(h.collector_name || 'Thu ngân')}</td>
+                                <td data-label="Kỳ thu:"><strong>${esc(h.billing_month)}</strong></td>
+                                <td data-label="Số tiền:" class="text-blue font-weight-medium">${format_money(h.amount)}</td>
+                                <td data-label="Trạng thái:"><span class="badge ${statusClass} small">${esc(h.payment_status)}</span></td>
+                                <td data-label="Ngày nộp:">${format_date(h.payment_date)}</td>
+                                <td data-label="Số phiếu:"><code>${esc(h.receipt_code)}</code></td>
+                                <td data-label="HĐ VNPT:">${vnptBadge}</td>
+                                <td data-label="Thu ngân:">${esc(h.collector_name || 'Thu ngân')}</td>
                                 <td class="text-end">
                                     ${publishBtn}
                                     <button type="button" class="btn btn-sm btn-outline-warning py-0 px-1 me-1" onclick="printHistorical(${h.id}, 'receipt')" title="In phiếu thu">
