@@ -23,15 +23,12 @@ class DashboardService
 
         // Total collected revenue
         $revenueRow = $pModel->selectSum('amount')
-            ->where('payment_status', 'Đã thanh toán')
+            ->whereIn('payment_status', ['Đã thu tiền', 'Đã xuất hóa đơn'])
             ->first();
         $totalRevenue = isset($revenueRow['amount']) ? (float)$revenueRow['amount'] : 0.0;
 
-        // Total pending / outstanding debt
-        $debtRow = $pModel->selectSum('amount')
-            ->whereIn('payment_status', ['Chưa thanh toán', 'Trễ hạn'])
-            ->first();
-        $totalPending = isset($debtRow['amount']) ? (float)$debtRow['amount'] : 0.0;
+        // Total pending / outstanding debt (hidden / unused)
+        $totalPending = 0.0;
 
         return [
             'total_households' => $totalHouseholds,
@@ -49,11 +46,11 @@ class DashboardService
         $pModel = new PaymentModel();
         $year   = date('Y');
 
-        $results = $pModel->select('billing_month, SUM(amount) as total')
-            ->where('payment_status', 'Đã thanh toán')
-            ->where("billing_month LIKE '{$year}-%'")
-            ->groupBy('billing_month')
-            ->orderBy('billing_month', 'ASC')
+        $results = $pModel->select('billing_from_month, SUM(amount) as total')
+            ->whereIn('payment_status', ['Đã thu tiền', 'Đã xuất hóa đơn'])
+            ->where("billing_from_month LIKE '{$year}-%'")
+            ->groupBy('billing_from_month')
+            ->orderBy('billing_from_month', 'ASC')
             ->findAll();
 
         $months = [];
@@ -66,7 +63,7 @@ class DashboardService
             
             $foundVal = 0.0;
             foreach ($results as $row) {
-                if ($row['billing_month'] === $monthKey) {
+                if ($row['billing_from_month'] === $monthKey) {
                     $foundVal = (float)$row['total'];
                     break;
                 }

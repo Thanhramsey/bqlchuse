@@ -79,12 +79,11 @@ $routes->group('', ['filter' => 'auth'], function($routes) {
         $routes->get('revenue', 'ReportController::revenueData', ['filter' => 'permission:reports.view']);
         $routes->get('export/excel', 'ReportController::exportExcel', ['filter' => 'permission:reports.export']);
         $routes->get('export/pdf', 'ReportController::exportPdf', ['filter' => 'permission:reports.export']);
+        // Detailed report endpoints
+        $routes->get('detail', 'ReportController::detailView', ['filter' => 'permission:reports.view']);
+        $routes->get('detail/data', 'ReportController::detailData', ['filter' => 'permission:reports.view']);
     });
 
-    // System Logs
-    $routes->group('logs', function($routes) {
-        $routes->get('', 'DashboardController::logs', ['filter' => 'permission:config.view']);
-    });
 
     // System Config
     $routes->group('config', function($routes) {

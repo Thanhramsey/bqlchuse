@@ -340,10 +340,12 @@ SOAP;
         if (stripos($result, 'OK:') === 0) {
             $okBody = substr($result, 3); // strip "OK:"
             // Extract invoice number: after the last "_" in first key-num pair
-            // Example: OK:1/003;C23TAA-BL-202601-HD00001-ABCD_1, key2_2
+            // Example: OK:1/003;C23TAA-HD_HD00001_15072026152030_26, key2_27
             $invNo = '';
-            if (preg_match('/[^_]+_(\d+)/', $okBody, $nm)) {
-                $invNo = $nm[1];
+            $firstPair = explode(',', $okBody)[0];
+            $lastUnderscorePos = strrpos($firstPair, '_');
+            if ($lastUnderscorePos !== false) {
+                $invNo = trim(substr($firstPair, $lastUnderscorePos + 1));
             }
             // Also try to get pattern and serial
             $pattern = '';

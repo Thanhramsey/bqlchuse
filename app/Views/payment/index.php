@@ -23,10 +23,18 @@
             border-radius: 8px;
             padding: 1rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            cursor: pointer;
         }
         /* Hide checkbox column on mobile */
         #householdsBillingTable tr td:first-child {
             display: none;
+        }
+        /* Hide specific card fields on mobile for cleaner view */
+        #householdsBillingTable td[data-label="Mã hộ:"],
+        #householdsBillingTable td[data-label="Loại hộ:"],
+        #householdsBillingTable td[data-label="Phiếu thu / HĐ:"],
+        #householdsBillingTable td[data-label="Trạng thái:"] {
+            display: none !important;
         }
         #householdsBillingTable td {
             text-align: left !important;
@@ -173,9 +181,11 @@
             <div class="card-body border-bottom py-3">
                 <div class="row g-2">
                     <div class="col-md-4">
-                        <div class="input-icon">
-                            <span class="input-icon-addon"><i class="ti ti-search"></i></span>
-                            <input type="text" id="search-input" class="form-control" placeholder="Tìm kiếm theo mã hộ, tên chủ hộ, địa chỉ...">
+                        <div class="input-group">
+                            <input type="text" id="search-input" class="form-control" placeholder="Tìm kiếm theo mã hộ, tên, địa chỉ...">
+                            <button class="btn btn-primary" type="button" id="btn-search" title="Tìm kiếm & Tải lại dữ liệu">
+                                <i class="ti ti-refresh"></i>
+                            </button>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -210,13 +220,12 @@
                             <th>Kỳ gần nhất</th>
                             <th>Phiếu thu / HĐ gần nhất</th>
                             <th>Ngày thu/xuất gần nhất</th>
-                            <th>Trạng thái</th>
                             <th class="w-1 text-end">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="table-body">
                         <tr>
-                            <td colspan="10" class="text-center py-4">
+                            <td colspan="9" class="text-center py-4">
                                 <div class="spinner-border text-primary me-2" role="status"></div> Đang tải dữ liệu...
                             </td>
                         </tr>
@@ -358,6 +367,12 @@
             loadData();
         });
 
+        // Search button click / refresh trigger
+        $('#btn-search').on('click', function() {
+            currentPage = 1;
+            loadData();
+        });
+
         // Select All checkboxes
         $('#check-all').on('change', function() {
             $('.check-item').prop('checked', this.checked);
@@ -374,6 +389,11 @@
         // Calculated values triggers
         $('#range_year, #range_from, #range_to').on('change', function() {
             recalculatePreview();
+        });
+
+        // Refresh grid when payment popup closes
+        $('#modal-range-payment').on('hidden.bs.modal', function () {
+            loadData();
         });
 
         // Bulk buttons trigger
@@ -578,7 +598,7 @@
     function renderTable(data) {
         let html = '';
         if (data.length === 0) {
-            html = '<tr><td colspan="10" class="text-center text-secondary">Không tìm thấy hộ dân nào thỏa mãn bộ lọc.</td></tr>';
+            html = '<tr><td colspan="9" class="text-center text-secondary">Không tìm thấy hộ dân nào thỏa mãn bộ lọc.</td></tr>';
         } else {
             data.forEach(item => {
                 let statusBadge = '<span class="badge bg-secondary-lt">Chưa thu tiền</span>';
@@ -603,7 +623,7 @@
                 const paymentDate = item.latest_date ? format_date(item.latest_date) : '<span class="text-muted">—</span>';
 
                 html += `
-                    <tr>
+                    <tr onclick="handleRowClick(event, ${item.id})" class="clickable-row">
                         <td><input type="checkbox" class="form-check-input check-item" value="${item.id}"></td>
                         <td data-label="Mã hộ:"><span class="text-secondary">${esc(item.household_code)}</span></td>
                         <td data-label="Chủ hộ:"><strong>${esc(item.owner_name)}</strong></td>
@@ -612,7 +632,6 @@
                         <td data-label="Kỳ gần nhất:"><strong>${latestMonth}</strong></td>
                         <td data-label="Phiếu thu / HĐ:">${receiptContent}</td>
                         <td data-label="Ngày thu/xuất:">${paymentDate}</td>
-                        <td data-label="Trạng thái:">${statusBadge}</td>
                         <td class="text-end">
                             <div class="btn-list justify-content-end flex-nowrap">
                                 <button class="btn btn-primary btn-sm" onclick="openIndividualModal(${item.id})">
@@ -625,6 +644,14 @@
             });
         }
         $('#table-body').html(html);
+    }
+
+    function handleRowClick(event, householdId) {
+        // Prevent click trigger if user clicked checkbox, button, icon or highlighted text
+        if (event.target.closest('input') || event.target.closest('button') || event.target.closest('a') || window.getSelection().toString() !== '') {
+            return;
+        }
+        openIndividualModal(householdId);
     }
 
     function openIndividualModal(householdId) {

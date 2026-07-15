@@ -24,7 +24,7 @@
 
 <!-- KPI Cards -->
 <div class="row row-cards">
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-4 col-md-4">
         <div class="card card-sm">
             <div class="card-body">
                 <div class="row align-items-center">
@@ -41,7 +41,7 @@
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-4 col-md-4">
         <div class="card card-sm">
             <div class="card-body">
                 <div class="row align-items-center">
@@ -58,24 +58,7 @@
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-auto">
-                        <span class="bg-danger text-white avatar"><i class="ti ti-alert-triangle"></i></span>
-                    </div>
-                    <div class="col">
-                        <div class="font-weight-medium">
-                            <?= format_money($metrics['total_pending']) ?>
-                        </div>
-                        <div class="text-secondary">Tiền chưa thu (Nợ tích lũy)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-4 col-md-4">
         <div class="card card-sm">
             <div class="card-body">
                 <div class="row align-items-center">

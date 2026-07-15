@@ -22,11 +22,11 @@ class PaymentService
     {
         $db = \Config\Database::connect();
         
-        // Subquery to get the latest paid/invoiced range payment for each household
+        // Subquery to get the latest paid/invoiced range payment for each household (by transaction sequence MAX(id))
         $subQuery = $db->table('payments')
             ->select('payments.*')
-            ->join('(SELECT household_id, MAX(billing_to_month) as max_to_month FROM payments WHERE payment_status IN ("Đã thu tiền", "Đã xuất hóa đơn") GROUP BY household_id) p2', 
-                   'payments.household_id = p2.household_id AND payments.billing_to_month = p2.max_to_month');
+            ->join('(SELECT household_id, MAX(id) as max_id FROM payments WHERE payment_status IN ("Đã thu tiền", "Đã xuất hóa đơn") GROUP BY household_id) p2', 
+                   'payments.household_id = p2.household_id AND payments.id = p2.max_id');
 
         $builder = $db->table('households h')
             ->select('h.id, h.household_code, h.owner_name, h.address, h.ward_group, cr.route_name, h.household_type,

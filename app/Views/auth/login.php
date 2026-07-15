@@ -26,7 +26,7 @@
             <div class="text-center mb-4">
                 <a href="." class="navbar-brand navbar-brand-autodark">
                     <span class="fs-2 fw-bold text-primary">
-                        <i class="ti ti-trash text-success me-2 fs-1"></i>QL RÁC THẢI
+                        <i class="ti ti-trash text-success me-2 fs-1"></i>BQL CÔNG TRÌNH ĐÔ THỊ CHƯ PƯH
                     </span>
                 </a>
             </div>

@@ -53,7 +53,7 @@
                 <h1 class="navbar-brand navbar-brand-autodark">
                     <a href="<?= base_url() ?>">
                         <i class="ti ti-trash text-success me-2 fs-1"></i>
-                        <span class="font-weight-bold" style="color: #fff; font-size: 1.25rem;">QL RÁC THẢI</span>
+                        <span class="font-weight-bold" style="color: #fff; font-size: 1.25rem;">BQL CÔNG TRÌNH ĐÔ THỊ CHƯ PƯH</span>
                     </a>
                 </h1>
                 <div class="navbar-nav flex-row d-lg-none">
