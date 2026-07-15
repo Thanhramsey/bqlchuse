@@ -92,7 +92,7 @@ class VnptInvoiceService
         }
 
         // 3. Build XML
-        $fkey   = $payment['receipt_code'] ?: ('QLRAC-' . $paymentId . '-' . time());
+        $fkey   = 'HD_' . $household['household_code'] . '_' . date('dmYHis');
         $xmlInv = $this->buildInvXml($payment, $household, $fkey);
 
         // 4. Call VNPT SOAP API
@@ -128,7 +128,7 @@ class VnptInvoiceService
     }
 
     // -------------------------------------------------------------------------
-    // XML Builder — VNPT standard invoice XML format
+    // XML Builder — theo đúng chuẩn cấu trúc VNPT
     // -------------------------------------------------------------------------
 
     public function buildInvXml(array $payment, array $household, string $fkey): string
@@ -144,60 +144,63 @@ class VnptInvoiceService
         $monthsCount = max(1, (($toYear - $fromYear) * 12 + ($toM - $fromM)) + 1);
 
         // Load fee rate for price/vat
-        $db    = \Config\Database::connect();
-        $rate  = $db->table('fee_rates')
+        $db   = \Config\Database::connect();
+        $rate = $db->table('fee_rates')
             ->where('id', $payment['fee_rate_id'] ?? 0)
             ->get()->getRowArray();
 
-        $price     = $rate ? (float)$rate['price'] : (float)($payment['amount'] / ($monthsCount ?: 1) / 1.1);
-        $vatRate   = $rate ? (float)$rate['vat'] : 10.0;
-        $subtotal  = $price * $monthsCount;
-        $vatAmt    = round($subtotal * $vatRate / 100, 0);
-        $total     = $subtotal + $vatAmt;
+        // Prices must be integer (VNPT does not accept decimals)
+        $price    = $rate ? (int)round((float)$rate['price']) : (int)round((float)$payment['amount'] / ($monthsCount ?: 1) / 1.1);
+        $vatRate  = $rate ? (int)round((float)$rate['vat']) : 10;
+        $subtotal = $price * $monthsCount;                           // Total before VAT
+        $vatAmt   = (int)round($subtotal * $vatRate / 100);          // VAT amount
+        $total    = $subtotal + $vatAmt;                             // Grand total
 
-        $prodName  = "Phí vệ sinh môi trường tháng " . str_pad($fromM, 2, '0', STR_PAD_LEFT) . '/' . $fromYear;
+        // Product name: "Phí vệ sinh môi trường tháng MM/YYYY [- MM/YYYY]"
+        $prodName = 'Phi ve sinh moi truong thang ' . str_pad($fromM, 2, '0', STR_PAD_LEFT) . '/' . $fromYear;
         if ($fromM !== $toM || $fromYear !== $toYear) {
             $prodName .= ' - ' . str_pad($toM, 2, '0', STR_PAD_LEFT) . '/' . $toYear;
         }
 
+        // KindOfService: ví dụ "PHI VE SINH THANG 01-07/2026"
+        $kindOfService = 'PHI VE SINH THANG ' . str_pad($fromM, 2, '0', STR_PAD_LEFT) . '-' . str_pad($toM, 2, '0', STR_PAD_LEFT) . '/' . $fromYear;
+
+        // Sanitize text (no special chars - VNPT may reject UTF-8 in some fields)
         $cusName    = htmlspecialchars($household['owner_name'] ?? '', ENT_XML1, 'UTF-8');
         $cusAddress = htmlspecialchars($household['address'] ?? '', ENT_XML1, 'UTF-8');
         $cusCode    = htmlspecialchars($household['household_code'] ?? '', ENT_XML1, 'UTF-8');
         $prodNameE  = htmlspecialchars($prodName, ENT_XML1, 'UTF-8');
+        $kindE      = htmlspecialchars($kindOfService, ENT_XML1, 'UTF-8');
         $fkeyE      = htmlspecialchars($fkey, ENT_XML1, 'UTF-8');
-        $amountWords = $this->numberToWords((int)$total);
-        $invDate    = date('Y-m-d', strtotime($payment['payment_date'] ?? 'now'));
+        $amountWords = $this->numberToWords($total);
+        $amountWordsE = htmlspecialchars($amountWords, ENT_XML1, 'UTF-8');
 
+        // Build XML exactly per VNPT spec (Minimalistic format verified working)
+        // IMPORTANT: <key> inside <Inv> is REQUIRED (*). Omit optional empty tags to avoid ERR:3
         $xml = <<<XML
 <Invoices>
   <Inv>
+    <key>{$fkeyE}</key>
     <Invoice>
       <CusCode>{$cusCode}</CusCode>
       <CusName>{$cusName}</CusName>
       <CusAddress>{$cusAddress}</CusAddress>
-      <CusTaxCode></CusTaxCode>
       <PaymentMethod>TM/CK</PaymentMethod>
-      <KindOfService>Dịch vụ vệ sinh môi trường</KindOfService>
-      <InvDate>{$invDate}</InvDate>
+      <KindOfService>{$kindE}</KindOfService>
       <Products>
         <Product>
-          <Code>PVS001</Code>
           <ProdName>{$prodNameE}</ProdName>
-          <ProdUnit>tháng</ProdUnit>
+          <ProdUnit>thang</ProdUnit>
           <ProdQuantity>{$monthsCount}</ProdQuantity>
           <ProdPrice>{$price}</ProdPrice>
           <Amount>{$subtotal}</Amount>
-          <VATRate>{$vatRate}</VATRate>
-          <VATAmount>{$vatAmt}</VATAmount>
-          <Total>{$total}</Total>
         </Product>
       </Products>
       <Total>{$subtotal}</Total>
       <VATRate>{$vatRate}</VATRate>
       <VATAmount>{$vatAmt}</VATAmount>
-      <AmountInWords>{$amountWords}</AmountInWords>
       <Amount>{$total}</Amount>
-      <fkey>{$fkeyE}</fkey>
+      <AmountInWords>{$amountWordsE}</AmountInWords>
     </Invoice>
   </Inv>
 </Invoices>
@@ -260,8 +263,8 @@ SOAP;
             ],
         ];
 
-        $context  = stream_context_create($options);
-        $raw      = @file_get_contents($endpoint, false, $context);
+        $context = stream_context_create($options);
+        $raw     = @file_get_contents($endpoint, false, $context);
 
         if ($raw === false) {
             $err = error_get_last();
@@ -282,7 +285,7 @@ SOAP;
     protected function parseResponse(string $raw): array
     {
         // Always log raw response for debugging
-        $logPath = WRITEPATH . 'logs/vnpt_debug.log';
+        $logPath   = WRITEPATH . 'logs/vnpt_debug.log';
         $timestamp = date('Y-m-d H:i:s');
         @file_put_contents($logPath, "\n\n=== [{$timestamp}] VNPT RAW RESPONSE ===\n{$raw}\n", FILE_APPEND);
 
@@ -290,79 +293,73 @@ SOAP;
             return ['success' => false, 'message' => 'VNPT trả về phản hồi rỗng.', 'inv_no' => null];
         }
 
-        // --- Step 1: Extract the inner result string from SOAP envelope using regex ---
-        // The result tag can be: ImportAndPublishInvResult
+        // Step 1: Extract the inner result string from SOAP envelope using regex
         $resultStr = null;
-
         if (preg_match('/<ImportAndPublishInvResult[^>]*>(.*?)<\/ImportAndPublishInvResult>/si', $raw, $m)) {
             $resultStr = trim($m[1]);
         }
 
-        // Also check for SOAP Fault
+        // Check for SOAP Fault
         if ($resultStr === null) {
             if (preg_match('/<faultstring[^>]*>(.*?)<\/faultstring>/si', $raw, $fm)) {
-                $faultMsg = strip_tags($fm[1]);
-                return ['success' => false, 'message' => "VNPT SOAP Fault: {$faultMsg}", 'inv_no' => null];
+                return ['success' => false, 'message' => 'VNPT SOAP Fault: ' . strip_tags($fm[1]), 'inv_no' => null];
             }
-            return ['success' => false, 'message' => 'Không tìm thấy kết quả ImportAndPublishInvResult trong phản hồi VNPT.', 'inv_no' => null];
+            return ['success' => false, 'message' => 'Không tìm thấy ImportAndPublishInvResult trong phản hồi VNPT.', 'inv_no' => null];
         }
 
         @file_put_contents($logPath, "=== ResultStr ===\n{$resultStr}\n", FILE_APPEND);
 
-        // --- Step 2: resultStr may be HTML-entity-encoded XML --- 
-        $decoded = html_entity_decode($resultStr, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        // Also try numeric entities
-        $decoded = preg_replace_callback('/&#(\d+);/', function($m) { return mb_chr((int)$m[1], 'UTF-8'); }, $decoded);
+        // -----------------------------------------------------------------------
+        // VNPT returns PLAIN STRING — not XML. Two formats:
+        //   ERR:X  → error
+        //   OK:pattern;serial-key1_num1, key2_num2, ...  → success
+        // -----------------------------------------------------------------------
 
-        @file_put_contents($logPath, "=== Decoded ===\n{$decoded}\n", FILE_APPEND);
+        // Decode any HTML entities first (SOAP may encode < > &)
+        $result = html_entity_decode($resultStr, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // --- Step 3: Try to parse as XML ---
-        libxml_use_internal_errors(true);
-        $resultXml = simplexml_load_string($decoded);
+        @file_put_contents($logPath, "=== Parsed result ===\n{$result}\n", FILE_APPEND);
 
-        if ($resultXml !== false) {
-            return $this->extractFromResultXml($resultXml);
+        // --- Handle ERR: prefix ---
+        if (stripos($result, 'ERR:') === 0) {
+            $errCode = strtoupper(trim($result));
+            $errMessages = [
+                'ERR:1'  => 'Tài khoản đăng nhập sai hoặc không có quyền (ERR:1). Kiểm tra C_USER_ID / C_PASSWORD_ID trong cấu hình.',
+                'ERR:3'  => 'Dữ liệu XML hóa đơn không đúng quy định VNPT (ERR:3). Kiểm tra cấu trúc XML.',
+                'ERR:5'  => 'Không phát hành được hóa đơn — DB rollback (ERR:5).',
+                'ERR:7'  => 'Username không phù hợp, không tìm thấy công ty tương ứng (ERR:7). Kiểm tra WS_USER_ID.',
+                'ERR:10' => 'Số hóa đơn vượt quá giới hạn tối đa cho phép (ERR:10).',
+                'ERR:20' => 'Pattern và Serial không phù hợp hoặc không tồn tại (ERR:20). Kiểm tra PATTERN_HD_ID / SERIAL_HD_ID.',
+            ];
+            $msg = $errMessages[$errCode] ?? "VNPT lỗi: {$result}";
+            return ['success' => false, 'message' => $msg, 'inv_no' => null];
         }
 
-        // --- Step 4: Maybe the result is already plain XML (not entity-encoded) ---
-        $resultXml2 = simplexml_load_string($resultStr);
-        if ($resultXml2 !== false) {
-            return $this->extractFromResultXml($resultXml2);
-        }
-
-        // --- Step 5: Try JSON ---
-        $resultJson = json_decode($decoded, true);
-        if ($resultJson !== null) {
-            $errCode = (string)($resultJson['ERR_CODE'] ?? $resultJson['errorCode'] ?? '-1');
-            $errMsg  = (string)($resultJson['ERR_MSG'] ?? $resultJson['description'] ?? 'Lỗi không rõ');
-            $invNo   = (string)($resultJson['INV_NO'] ?? $resultJson['invoiceNo'] ?? '');
-            if ($errCode === '0' || $invNo !== '') {
-                return ['success' => true, 'message' => 'OK', 'inv_no' => $invNo];
-            }
-            return ['success' => false, 'message' => "VNPT lỗi [{$errCode}]: {$errMsg}", 'inv_no' => null];
-        }
-
-        // --- Step 6: Try regex-only parse on common patterns ---
-        // Pattern: ERR_CODE=0, INV_NO=123
-        if (preg_match('/<ERR_CODE[^>]*>(\d+)<\/ERR_CODE>/i', $decoded, $ec)) {
-            $errCode = $ec[1];
+        // --- Handle OK: prefix ---
+        // Format: OK:pattern;serial-key1_num1, key2_num2, ...
+        if (stripos($result, 'OK:') === 0) {
+            $okBody = substr($result, 3); // strip "OK:"
+            // Extract invoice number: after the last "_" in first key-num pair
+            // Example: OK:1/003;C23TAA-BL-202601-HD00001-ABCD_1, key2_2
             $invNo = '';
-            if (preg_match('/<INV_NO[^>]*>([^<]+)<\/INV_NO>/i', $decoded, $in)) {
-                $invNo = trim($in[1]);
+            if (preg_match('/[^_]+_(\d+)/', $okBody, $nm)) {
+                $invNo = $nm[1];
             }
-            $errMsg = '';
-            if (preg_match('/<ERR_MSG[^>]*>([^<]*)<\/ERR_MSG>/i', $decoded, $em)) {
-                $errMsg = trim($em[1]);
+            // Also try to get pattern and serial
+            $pattern = '';
+            $serial  = '';
+            if (preg_match('/^([^;]+);([^-]+)-/', $okBody, $ps)) {
+                $pattern = trim($ps[1]);
+                $serial  = trim($ps[2]);
             }
-            if ($errCode === '0' || $invNo !== '') {
-                return ['success' => true, 'message' => 'OK', 'inv_no' => $invNo];
-            }
-            return ['success' => false, 'message' => "VNPT lỗi [{$errCode}]: " . ($errMsg ?: 'Xem log vnpt_debug.log để biết thêm chi tiết'), 'inv_no' => null];
+            $displayNo = $invNo ?: $okBody;
+            @file_put_contents($logPath, "=== SUCCESS inv_no={$invNo} pattern={$pattern} serial={$serial} ===\n", FILE_APPEND);
+            return ['success' => true, 'message' => 'OK', 'inv_no' => $displayNo, 'raw_ok' => $okBody];
         }
 
-        // Fallback: return the raw string as error
-        $preview = mb_substr($decoded ?: $resultStr, 0, 300);
-        return ['success' => false, 'message' => "Phản hồi VNPT không phân tích được. Nội dung: {$preview}", 'inv_no' => null];
+        // --- Fallback: unknown format ---
+        $preview = mb_substr($result, 0, 300);
+        return ['success' => false, 'message' => "Phản hồi VNPT không nhận dạng được: {$preview}", 'inv_no' => null];
     }
 
     /**
@@ -370,14 +367,11 @@ SOAP;
      */
     protected function extractFromResultXml(\SimpleXMLElement $xml): array
     {
-        // VNPT returns flat: <result><ERR_CODE>0</ERR_CODE><INV_NO>1</INV_NO>...</result>
-        // or nested under <Inv>
         $errCode = (string)($xml->ERR_CODE ?? $xml->errorCode ?? '');
         $errMsg  = (string)($xml->ERR_MSG ?? $xml->description ?? '');
         $invNo   = (string)($xml->INV_NO ?? $xml->invoiceNo ?? '');
         $guid    = (string)($xml->INVOICE_GUID ?? $xml->guid ?? '');
 
-        // Nested check
         if ($errCode === '') {
             foreach (['Inv', 'Invoice', 'RESULT', 'result'] as $tag) {
                 $child = $xml->{$tag} ?? null;
@@ -391,14 +385,13 @@ SOAP;
             }
         }
 
-        // Success: ERR_CODE=0 or we got a GUID or INV_NO
         if ($errCode === '0' || $guid !== '' || ($invNo !== '' && $errCode !== '1')) {
             return ['success' => true, 'message' => 'OK', 'inv_no' => $invNo ?: $guid];
         }
 
         return [
             'success' => false,
-            'message' => "VNPT lỗi [{$errCode}]: " . ($errMsg ?: 'Xem file writable/logs/vnpt_debug.log để biết thêm chi tiết'),
+            'message' => "VNPT lỗi [{$errCode}]: " . ($errMsg ?: 'Xem file writable/logs/vnpt_debug.log'),
             'inv_no'  => null,
         ];
     }

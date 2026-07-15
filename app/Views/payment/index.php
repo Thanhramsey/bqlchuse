@@ -27,8 +27,8 @@
             <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                 <h3 class="card-title">Hệ thống quản lý thu phí dịch vụ môi trường</h3>
                 
-                <!-- Bulk Actions -->
-                <div class="btn-list">
+                <!-- Bulk Actions (Hidden per user request) -->
+                <div class="btn-list d-none">
                     <?php if (has_permission('payments.create')) : ?>
                     <button class="btn btn-success btn-bulk-action" data-action="pay">
                         <i class="ti ti-cash me-2"></i>Thu tiền hàng loạt
@@ -85,7 +85,7 @@
                             <th>Địa chỉ</th>
                             <th>Loại hộ</th>
                             <th>Kỳ gần nhất</th>
-                            <th>Số phiếu thu gần nhất</th>
+                            <th>Phiếu thu / HĐ gần nhất</th>
                             <th>Ngày thu/xuất gần nhất</th>
                             <th>Trạng thái</th>
                             <th class="w-1 text-end">Thao tác</th>
@@ -113,7 +113,7 @@
 
 <!-- Modal Range Action (Individual & Bulk) -->
 <div class="modal modal-blur fade" id="modal-range-payment" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modal-range-title">Xử lý thu phí theo khoảng thời gian</h5>
@@ -443,6 +443,15 @@
         loadData();
     }
 
+    function formatReceiptCode(code) {
+        if (!code) return '';
+        const parts = code.split('-');
+        if (parts.length === 4) {
+            return `${parts[0]}-${parts[1]}-${parts[3]}`;
+        }
+        return code;
+    }
+
     function renderTable(data) {
         let html = '';
         if (data.length === 0) {
@@ -457,7 +466,17 @@
                 }
 
                 const latestMonth = item.latest_month ? esc(item.latest_month) : '<span class="text-muted">—</span>';
-                const receipt = item.latest_receipt ? `<code>${esc(item.latest_receipt)}</code>` : '<span class="text-muted">—</span>';
+                
+                // Format receipt and show latest VNPT invoice if published
+                let receiptContent = '<span class="text-muted">—</span>';
+                if (item.latest_receipt) {
+                    const formattedCode = formatReceiptCode(item.latest_receipt);
+                    const latestVnptBadge = item.latest_vnpt_inv_no
+                        ? `<div class="mt-1"><span class="badge bg-teal-lt text-teal" style="font-size: 0.75rem;"><i class="ti ti-file-check me-1"></i>HĐ: ${esc(item.latest_vnpt_inv_no)}</span></div>`
+                        : '';
+                    receiptContent = `<div><code>${esc(formattedCode)}</code></div>${latestVnptBadge}`;
+                }
+
                 const paymentDate = item.latest_date ? format_date(item.latest_date) : '<span class="text-muted">—</span>';
 
                 html += `
@@ -468,19 +487,13 @@
                         <td>${esc(item.address)}</td>
                         <td><span class="badge bg-blue-lt">${esc(item.household_type)}</span></td>
                         <td><strong>${latestMonth}</strong></td>
-                        <td>${receipt}</td>
+                        <td>${receiptContent}</td>
                         <td>${paymentDate}</td>
                         <td>${statusBadge}</td>
                         <td class="text-end">
                             <div class="btn-list justify-content-end flex-nowrap">
                                 <button class="btn btn-primary btn-sm" onclick="openIndividualModal(${item.id})">
-                                    <i class="ti ti-cash me-1"></i>Thu phí
-                                </button>
-                                <button class="btn btn-warning btn-sm" onclick="printSingle(${item.id}, 'receipt')">
-                                    <i class="ti ti-printer me-1"></i>Phiếu thu
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="printSingle(${item.id}, 'invoice')">
-                                    <i class="ti ti-file-invoice me-1"></i>Hóa đơn
+                                    <i class="ti ti-settings me-1"></i>TÁC VỤ
                                 </button>
                             </div>
                         </td>

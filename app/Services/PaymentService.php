@@ -28,10 +28,9 @@ class PaymentService
             ->join('(SELECT household_id, MAX(billing_to_month) as max_to_month FROM payments WHERE payment_status IN ("Đã thu tiền", "Đã xuất hóa đơn") GROUP BY household_id) p2', 
                    'payments.household_id = p2.household_id AND payments.billing_to_month = p2.max_to_month');
 
-        // Main Query
         $builder = $db->table('households h')
             ->select('h.id, h.household_code, h.owner_name, h.address, h.ward_group, cr.route_name, h.household_type,
-                      p.billing_month as latest_month, p.payment_status as latest_status, p.payment_date as latest_date, p.receipt_code as latest_receipt')
+                      p.billing_month as latest_month, p.payment_status as latest_status, p.payment_date as latest_date, p.receipt_code as latest_receipt, p.vnpt_inv_no as latest_vnpt_inv_no')
             ->join('collection_routes cr', 'cr.id = h.route_id', 'left')
             ->join('(' . $subQuery->getCompiledSelect() . ') p', 'h.id = p.household_id', 'left')
             ->where('h.deleted_at', null)
@@ -173,7 +172,7 @@ class PaymentService
                     if ($action === 'invoice' && $ov['payment_status'] === 'Đã thu tiền' 
                         && $ov['billing_from_month'] === $fromStr && $ov['billing_to_month'] === $toStr) {
                         
-                        $receiptCode = $ov['receipt_code'] ?: 'BL-' . str_replace('-', '', $fromStr) . '-' . $h['household_code'] . '-' . strtoupper(substr(uniqid(), -4));
+                        $receiptCode = $ov['receipt_code'] ?: 'PT-' . str_replace('-', '', $fromStr) . '-' . $h['household_code'] . '-' . strtoupper(substr(uniqid(), -4));
                         
                         $this->paymentModel->update($ov['id'], [
                             'payment_status' => 'Đã xuất hóa đơn',
@@ -229,7 +228,7 @@ class PaymentService
             }
 
             // Create new single range payment record
-            $receiptCode = 'BL-' . str_replace('-', '', $fromStr) . '-' . $h['household_code'] . '-' . strtoupper(substr(uniqid(), -4));
+            $receiptCode = 'PT-' . str_replace('-', '', $fromStr) . '-' . $h['household_code'] . '-' . strtoupper(substr(uniqid(), -4));
             
             $this->paymentModel->insert([
                 'household_id'       => $hId,

@@ -130,15 +130,7 @@
                         </li>
                         <?php endif; ?>
 
-                        <!-- Debts -->
-                        <?php if (has_permission('debts.view')) : ?>
-                        <li class="nav-item <?= str_contains(uri_string(), 'debts') ? 'active' : '' ?>">
-                            <a class="nav-link" href="<?= base_url('debts') ?>">
-                                <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-alert-triangle"></i></span>
-                                <span class="nav-link-title">Công nợ</span>
-                            </a>
-                        </li>
-                        <?php endif; ?>
+
 
                         <!-- Reports -->
                         <?php if (has_permission('reports.view')) : ?>

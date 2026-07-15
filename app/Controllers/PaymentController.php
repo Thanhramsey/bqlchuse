@@ -279,7 +279,7 @@ class PaymentController extends BaseController
             ->first();
 
         if (!$payment) {
-            return 'Không tìm thấy thông tin biên lai này.';
+            return 'Không tìm thấy thông tin phiếu thu này.';
         }
 
         $household = $householdModel->select('households.*, collection_routes.route_name')

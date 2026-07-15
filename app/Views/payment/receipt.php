@@ -136,7 +136,7 @@
                 <h3><?= esc($config['company_name']) ?></h3>
                 <h4>Điện thoại: <?= esc($config['company_phone']) ?> | Email: <?= esc($config['company_email']) ?></h4>
                 <h2>
-                    <?= $data['print_type'] === 'invoice' ? 'HÓA ĐƠN PHÍ DỊCH VỤ' : 'BIÊN LAI THU TIỀN PHÍ' ?>
+                    <?= $data['print_type'] === 'invoice' ? 'HÓA ĐƠN PHÍ DỊCH VỤ' : 'PHIẾU THU TIỀN PHÍ' ?>
                 </h2>
                 <p>(Dịch vụ thu gom và xử lý rác thải sinh hoạt)</p>
                 <div style="margin-top: 10px; font-weight: bold;">Số phiếu: <?= esc($data['receipt_code'] ?: 'DỰ THẢO') ?></div>
