@@ -85,6 +85,9 @@ $routes->group('', ['filter' => 'auth'], function($routes) {
     });
 
 
+    // System Logs
+    $routes->get('logs', 'DashboardController::logs', ['filter' => 'permission:config.view']);
+
     // System Config
     $routes->group('config', function($routes) {
         $routes->get('', 'DashboardController::config', ['filter' => 'permission:config.view']);
